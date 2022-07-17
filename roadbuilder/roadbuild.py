@@ -59,6 +59,18 @@ class RoadBuild:
         if point_layer.featureCount() < 2:
             QMessageBox.warning(None, u"Ошибка", u'В слое точек кисло с точками!')
             return
+
+        # Убьем временные слои, если они есть
+        # Прочь с дороги!
+        layers = QgsProject.instance().mapLayersByName(lines_name)            
+        if len(layers) != 0:
+           layer_lines = layers[0]
+           QgsProject.instance().removeMapLayer(layer_lines.id())
+           
+        layers = QgsProject.instance().mapLayersByName("Buffered")            
+        if len(layers) != 0:
+           layer_buffer= layers[0]
+           QgsProject.instance().removeMapLayer(layer_buffer.id())
         
         # дербаним точки
         # создадим служебные списки для обработки
@@ -113,10 +125,10 @@ class RoadBuild:
             idi = idi + 1
             
         layer.commitChanges()
+        layer.updateExtents()
         
         # формируем буфера дорог
-        # жутко неудобно они формируются, но уж как есть
-        layer.updateExtents()
+        # жутко неудобно они формируются, но уж как есть    
         QgsProject.instance().addMapLayers([layer])
         processing.runAndLoadResults("native:buffer", {'INPUT': layer,
                'DISTANCE': buffer_size,
@@ -129,7 +141,7 @@ class RoadBuild:
 
         # Буфера надо спроецировать домой, а то что им в Японии мучаться
         layers = QgsProject.instance().mapLayersByName("Buffered")            
-        if layers != None:
+        if len(layers) != 0:
            layer_buffer= layers[0]
            layer_buffer.setCrs(crs)
                 

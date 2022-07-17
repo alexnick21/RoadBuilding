@@ -248,12 +248,12 @@ class RoadBuilder:
             buffer_size = float(self.dlg.lineEditBufSize.text())
             layer_points = None
             layers = QgsProject.instance().mapLayersByName(self.dlg.comboBoxPoints.currentText())            
-            if layers != None:
+            if len(layers) != 0:
                 layer_points = layers[0]
             
             layer_relief = None
             layers = QgsProject.instance().mapLayersByName(self.dlg.comboBoxRelief.currentText())            
-            if layers != None:
+            if len(layers) != 0:
                 layer_relief = layers[0]
 
             if layer_points != None and layer_relief != None:
