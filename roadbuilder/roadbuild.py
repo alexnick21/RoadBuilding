@@ -91,7 +91,7 @@ class RoadBuild:
            # do some stuff here
            
         # Создадим в памяти слой
-        # Сразу запихаем его в правильную систему координат
+        # Сразу запихаем его в правильную систему координат дабы не искать его в Японии
         crs = QgsProject.instance().crs()
         layer = QgsVectorLayer('LineString?crs=epsg:' + str(crs.authid()), lines_name , 'memory') #?crs=epsg:4326
         prov = layer.dataProvider()
@@ -109,6 +109,8 @@ class RoadBuild:
             
         layer.commitChanges()
         
+        # формируем буфера дорог
+        # жутко неудобно они формируются, но уж как есть
         layer.updateExtents()
         QgsProject.instance().addMapLayers([layer])
         processing.runAndLoadResults("native:buffer", {'INPUT': layer,
@@ -119,5 +121,11 @@ class RoadBuild:
                'JOIN_STYLE': 0,
                'MITER_LIMIT': 10,
                'OUTPUT': 'memory:buffer'})
-        
+
+        # Буфера надо спроецировать домой, а то что им в Японии мучаться
+        layers = QgsProject.instance().mapLayersByName("Buffered")            
+        if layers != None:
+           layer_buffer= layers[0]
+           layer_buffer.setCrs(crs)
+                
         return self.data
