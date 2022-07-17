@@ -94,6 +94,7 @@ class RoadBuild:
         # Сразу запихаем его в правильную систему координат дабы не искать его в Японии
         crs = QgsProject.instance().crs()
         layer = QgsVectorLayer('LineString?crs=epsg:' + str(crs.authid()), lines_name , 'memory') #?crs=epsg:4326
+        layer.setCrs(crs) # Он с первого раза не понял :)
         prov = layer.dataProvider()
         layer.startEditing()
         res = prov.addAttributes([QgsField("ID", QVariant.Int), QgsField("segment", QVariant.String)])      
