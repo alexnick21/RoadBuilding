@@ -46,11 +46,17 @@ class RoadBuild:
         self.segment_names = []
         self.data = []
 
+    def updateArea(self,ID,area):
+        for line in self.data:
+            if line[0] == ID:
+                line[3] = area
+                break
+
     ### Создаем дороги и все, что с ними связано ###
     # point_layer - Слой "крафтовых" точек
     # lines_name  - Имя для линейного слоя
     # buffer_size - Размер буфера в единицах проекта
-    def CreateRoads(self, point_layer, lines_name, buffer_size):
+    def createRoads(self, point_layer, lines_name, buffer_size):
         begin_points = []
         begin_points_num = []
         end_points   = []
@@ -92,6 +98,9 @@ class RoadBuild:
             idi = idi + 1
 
         # Построим "дороги"
+        # СОеденяем все и со всем по кратчайшему пути
+        # Анализ рельефа остается только в рамках
+        # вычисления длин наклонных линий и поправке к площади проекции
         for pb, bi in zip(begin_points, begin_points_num):
             for pe, ei in zip(end_points, end_points_num):
                 poline = QgsGeometry.fromPolylineXY([pb, pe])
@@ -144,5 +153,14 @@ class RoadBuild:
         if len(layers) != 0:
            layer_buffer= layers[0]
            layer_buffer.setCrs(crs)
+
+           # Выясним и запомним площади
+           feats = layer_buffer.getFeatures()
+           for feat in feats:
+               g = feat.geometry()
+               fi = layer_buffer.fields().indexFromName('ID')
+               fid = feat.attributes()[fi]
+               self.updateArea(fid,g.area())
+            
                 
         return self.data

@@ -258,7 +258,7 @@ class RoadBuilder:
 
             if layer_points != None and layer_relief != None:
                 roads = RoadBuild()
-                result_data = roads.CreateRoads(layer_points, layer_roads_name, buffer_size)
+                result_data = roads.createRoads(layer_points, layer_roads_name, buffer_size)
                 #QgsMessageLog.logMessage(u"Точки: " + str(layer_points.name()),"RoadBuilder")
                 #QgsMessageLog.logMessage(u"Линии: " + str(layer_roads_name),"RoadBuilder")
                 #QgsMessageLog.logMessage(u"Рельеф: " + str(layer_relief.name()),"RoadBuilder")
@@ -266,31 +266,37 @@ class RoadBuilder:
                 resultDlg = ResultDialog()
                 resultDlg.tableWidgetResult.setRowCount(len(result_data))
                 resultDlg.tableWidgetResult.setColumnCount(4)
-                # Set the table headers
+                # Заголовки таблицы
                 resultDlg.tableWidgetResult.setHorizontalHeaderLabels(["ID","Сегмент", "Длина", "Площадь"])
  
-                #Set the tooltips to headings
+                #Подсказки для заголовков
                 resultDlg.tableWidgetResult.horizontalHeaderItem(0).setToolTip("Идентификатор")
                 resultDlg.tableWidgetResult.horizontalHeaderItem(1).setToolTip("Наименование сегмента")
                 resultDlg.tableWidgetResult.horizontalHeaderItem(2).setToolTip("Длина, м")
                 resultDlg.tableWidgetResult.horizontalHeaderItem(3).setToolTip("Площадь, м2")
          
-                # Set the alignment to the headers
+                # Выравнивание текста
                 resultDlg.tableWidgetResult.horizontalHeaderItem(0).setTextAlignment(Qt.AlignLeft)
-                resultDlg.tableWidgetResult.horizontalHeaderItem(1).setTextAlignment(Qt.AlignHCenter)
-                resultDlg.tableWidgetResult.horizontalHeaderItem(2).setTextAlignment(Qt.AlignRight)
-                resultDlg.tableWidgetResult.horizontalHeaderItem(3).setTextAlignment(Qt.AlignRight)
+                resultDlg.tableWidgetResult.horizontalHeaderItem(1).setTextAlignment(Qt.AlignLeft)
+                resultDlg.tableWidgetResult.horizontalHeaderItem(2).setTextAlignment(Qt.AlignLeft)
+                resultDlg.tableWidgetResult.horizontalHeaderItem(3).setTextAlignment(Qt.AlignLeft)
          
-                # Fill the first line
+                # Заполнение таблицы
                 i = 0
+                total_length = 0.0
+                total_area   = 0.0
                 for str_data in result_data:
+                    total_length = total_length + str_data[2]
+                    total_area   = total_area + str_data[3]
                     resultDlg.tableWidgetResult.setItem(i, 0, QTableWidgetItem(str(str_data[0])))
                     resultDlg.tableWidgetResult.setItem(i, 1, QTableWidgetItem(str(str_data[1])))
-                    resultDlg.tableWidgetResult.setItem(i, 2, QTableWidgetItem(str(str_data[2])))
-                    resultDlg.tableWidgetResult.setItem(i, 3, QTableWidgetItem(str(str_data[3])))
+                    resultDlg.tableWidgetResult.setItem(i, 2, QTableWidgetItem('{:10.5f}'.format(str_data[2])))
+                    resultDlg.tableWidgetResult.setItem(i, 3, QTableWidgetItem('{:10.5f}'.format(str_data[3])))
                     i = i + 1
                 
-
+                resultDlg.lineEditLength.setText('{:10.5f}'.format(total_length))
+                resultDlg.lineEditArea.setText('{:10.5f}'.format(total_area))
+                
                 resultDlg.show()
                 result = resultDlg.exec_()
             else:
