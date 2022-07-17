@@ -24,6 +24,7 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QTableWidgetItem
+from qgis.gui import QgsDoubleValidator
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -228,7 +229,12 @@ class RoadBuilder:
         layer_names = [layer.name() for layer in QgsProject.instance().mapLayers().values()]
         self.dlg.lineEditRoad.setText("road_lines")
         self.dlg.comboBoxPoints.addItems(layer_names)
-        self.dlg.comboBoxRelief.addItems(layer_names)
+        self.dlg.comboBoxRelief.addItems(layer_names)        
+        
+        # Валидируем ввод.
+        size_validator = QgsDoubleValidator(0.0001,999.9999,5,None)
+        self.dlg.lineEditBufSize.setValidator(size_validator)
+        self.dlg.lineEditBufSize.setText("4")
         self.dlg.show()
                        
         # Run the dialog event loop
@@ -239,6 +245,7 @@ class RoadBuilder:
             # substitute with your code.
             
             layer_roads_name = self.dlg.lineEditRoad.text()
+            buffer_size = float(self.dlg.lineEditBufSize.text())
             layer_points = None
             layers = QgsProject.instance().mapLayersByName(self.dlg.comboBoxPoints.currentText())            
             if layers != None:
@@ -251,7 +258,7 @@ class RoadBuilder:
 
             if layer_points != None and layer_relief != None:
                 roads = RoadBuild()
-                result_data = roads.CreateRoads(layer_points, layer_roads_name)
+                result_data = roads.CreateRoads(layer_points, layer_roads_name, buffer_size)
                 #QgsMessageLog.logMessage(u"Точки: " + str(layer_points.name()),"RoadBuilder")
                 #QgsMessageLog.logMessage(u"Линии: " + str(layer_roads_name),"RoadBuilder")
                 #QgsMessageLog.logMessage(u"Рельеф: " + str(layer_relief.name()),"RoadBuilder")

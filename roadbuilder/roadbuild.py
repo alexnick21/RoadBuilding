@@ -46,7 +46,11 @@ class RoadBuild:
         self.segment_names = []
         self.data = []
 
-    def CreateRoads(self, point_layer, lines_name):
+    ### Создаем дороги и все, что с ними связано ###
+    # point_layer - Слой "крафтовых" точек
+    # lines_name  - Имя для линейного слоя
+    # buffer_size - Размер буфера в единицах проекта
+    def CreateRoads(self, point_layer, lines_name, buffer_size):
         begin_points = []
         begin_points_num = []
         end_points   = []
@@ -115,7 +119,7 @@ class RoadBuild:
         layer.updateExtents()
         QgsProject.instance().addMapLayers([layer])
         processing.runAndLoadResults("native:buffer", {'INPUT': layer,
-               'DISTANCE': 0.004,
+               'DISTANCE': buffer_size,
                'SEGMENTS': len(self.line_segments),
                'DISSOLVE': False,
                'END_CAP_STYLE': 0,
