@@ -48,6 +48,19 @@ class RoadBuild:
         self.segment_names = []
         self.segment_elev =  []
         self.data = []
+        self.begin_points = []
+        self.begin_points_num = []
+        self.end_points   = []
+        self.end_points_num   = []
+
+    # Проверка нахождения точки на проектной линии
+    def hasTransitPoint(self, polyline, bp, ep):
+        for p in self.begin_points:
+            dist = polyline.distance( QgsGeometry.fromPointXY(p))
+            if dist == 0 and not QgsGeometry.fromPointXY(p).equals(QgsGeometry.fromPointXY(bp)) and not QgsGeometry.fromPointXY(p).equals(QgsGeometry.fromPointXY(ep)):
+                return True
+
+        return False   
 
     # Получение информации о высоте точки
     # по данным растра
@@ -66,11 +79,7 @@ class RoadBuild:
     # point_layer - Слой "крафтовых" точек
     # lines_name  - Имя для линейного слоя
     # buffer_size - Размер буфера в единицах проекта
-    def createRoads(self, point_layer, lines_name, buffer_size, layer_relief):
-        begin_points = []
-        begin_points_num = []
-        end_points   = []
-        end_points_num   = []
+    def createRoads(self, point_layer, lines_name, buffer_size, layer_relief):        
         features = point_layer.getFeatures()
         if point_layer.featureCount() < 2:
             QMessageBox.warning(None, u"Ошибка", u'В слое точек кисло с точками!')
@@ -97,10 +106,10 @@ class RoadBuild:
             if geom.type() == QgsWkbTypes.PointGeometry:
                 if geomSingleType:
                     #Все правильно, можно колбасить
-                    begin_points.append(geom.asPoint())
-                    begin_points_num.append(idi)
-                    end_points.append(geom.asPoint())
-                    end_points_num.append(idi)
+                    self.begin_points.append(geom.asPoint())
+                    self.begin_points_num.append(idi)
+                    self.end_points.append(geom.asPoint())
+                    self.end_points_num.append(idi)
                 else:
                     QMessageBox.warning(None, u"Ошибка", u'В слое точек что-то не так с геометрией!')
                     return
@@ -112,16 +121,17 @@ class RoadBuild:
         # Анализ рельефа остается только в рамках
         # вычисления длин наклонных линий и поправке к площади проекции
         # реальную поверхность упрощаем т.к. задача очевидно не боевая
-        for pb, bi in zip(begin_points, begin_points_num):
-            for pe, ei in zip(end_points, end_points_num):
+        for pb, bi in zip(self.begin_points, self.begin_points_num):
+            for pe, ei in zip(self.end_points, self.end_points_num):
                 poline = QgsGeometry.fromPolylineXY([pb, pe])
-                if poline.length() != 0:
+                # Встраиваем примитивную проверку на откровенно ненужные сегменты
+                if poline.length() != 0 and not self.hasTransitPoint(poline, pb, pe):
                     self.segment_elev.append([self.valueRaster(pb, layer_relief), self.valueRaster(pe, layer_relief)])
                     self.line_segments.append(poline)
                     self.segment_names.append(str(bi) + '-' + str(ei))
                 
-            end_points.pop(0)
-            end_points_num.pop(0)                    
+            self.end_points.pop(0)
+            self.end_points_num.pop(0)                    
            
         # Создадим в памяти слой
         # Сразу запихаем его в правильную систему координат дабы не искать его в Японии
