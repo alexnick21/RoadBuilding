@@ -5,7 +5,7 @@
 [general]
 name=Построитель дорог
 qgisMinimumVersion=3.0
-description=Плагин строит дороги по заданным ВУ
+description=Плагин строит дороги по заданным ВУ.
 version=0.1
 author=alexnick
 email=alexnick_ank@mail.ru

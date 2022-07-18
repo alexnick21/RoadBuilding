@@ -130,7 +130,12 @@ class RoadBuild:
         layer.setCrs(crs) # Он с первого раза не понял :)
         prov = layer.dataProvider()
         layer.startEditing()
-        res = prov.addAttributes([QgsField("ID", QVariant.Int), QgsField("segment", QVariant.String), QgsField("h", QVariant.Double),QgsField("incl", QVariant.Double)])      
+        res = prov.addAttributes([QgsField("ID", QVariant.Int),
+                                  QgsField("segment", QVariant.String),
+                                  QgsField("h", QVariant.Double),
+                                  QgsField("incl", QVariant.Double),
+                                  QgsField("L", QVariant.Double),
+                                  QgsField("S", QVariant.Double)])      
         
         idi = 1
         for pol, nm, elevations in zip(self.line_segments, self.segment_names, self.segment_elev):
@@ -144,7 +149,7 @@ class RoadBuild:
             
             inclination = math.asin(abs(h) / L)
             
-            feat.setAttributes([idi, nm, h , inclination])
+            feat.setAttributes([idi, nm, h , inclination, L, 0.0])
             feat.setGeometry(pol)
             prov.addFeatures([feat])
             
@@ -169,20 +174,29 @@ class RoadBuild:
         # Буфера надо спроецировать домой, а то что им в Японии мучаться
         layers = QgsProject.instance().mapLayersByName("Buffered")            
         if len(layers) != 0:
-           layer_buffer= layers[0]
+           layer_buffer = layers[0]
            layer_buffer.setCrs(crs)
 
-           # Выясним и запомним площади
+           # Выясним и запомним площади        
+           layer_buffer.startEditing()
            feats = layer_buffer.getFeatures()
            for feat in feats:
                g = feat.geometry()
                fi = layer_buffer.fields().indexFromName('ID')
                incli = layer_buffer.fields().indexFromName('incl')
+               Si = layer_buffer.fields().indexFromName('S')
+               
                fid = feat.attributes()[fi]
                incl = feat.attributes()[incli]
+               
                # Корректируем площадь по углу наклона
                # Исходим из теоремы о площади проекции плоской фигуры
-               self.updateArea(fid,g.area() / math.cos(incl))
-            
+               S = g.area() / math.cos(incl)
+               self.updateArea(fid, S)
+               feat.setAttribute(Si,S)
+               layer_buffer.updateFeature(feat)
+               
+           layer_buffer.commitChanges()
+           layer_buffer.updateExtents()
                 
         return self.data
