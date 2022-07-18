@@ -115,7 +115,7 @@ class RoadBuild:
                     self.end_points_num.append(idi)
                 else:
                     QMessageBox.warning(None, u"Ошибка", u'В слое точек что-то не так с геометрией!')
-                    return
+                    return self.data
                 
             idi = idi + 1
 
@@ -155,14 +155,19 @@ class RoadBuild:
             feat = QgsFeature()
             
             # Вычисление превышения и угла наклона
-            # Прибегаем к помощи теоремы Пифагора
+            if elevations[0] == None or elevations[1] == None:
+                QMessageBox.warning(None, u"Ошибка", u'Похоже, что растр где-то не там!')
+                return self.data
+                
             h = elevations[0] - elevations[1]
+            
             # Учитываем общий наклон поверхности
+            # Прибегаем к помощи теоремы Пифагора
             L = math.sqrt(abs(h)**2 + pol.length()**2)
             
             inclination = math.asin(abs(h) / L)
             
-            feat.setAttributes([idi, nm, h , inclination, L, 0.0])
+            feat.setAttributes([idi, nm, h , math.degrees(inclination), L, 0.0])
             feat.setGeometry(pol)
             prov.addFeatures([feat])
             
@@ -200,7 +205,7 @@ class RoadBuild:
                Si = layer_buffer.fields().indexFromName('S')
                
                fid = feat.attributes()[fi]
-               incl = feat.attributes()[incli]
+               incl = math.radians(feat.attributes()[incli])
                
                # Корректируем площадь по углу наклона
                # Исходим из теоремы о площади проекции плоской фигуры

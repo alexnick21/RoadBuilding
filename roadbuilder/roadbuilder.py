@@ -246,6 +246,8 @@ class RoadBuilder:
                 raster_layer_names.append(layer.name())
                 
         self.dlg.lineEditRoad.setText("road_lines")
+        self.dlg.comboBoxPoints.clear()
+        self.dlg.comboBoxRelief.clear()
         self.dlg.comboBoxPoints.addItems(layer_names)
         self.dlg.comboBoxRelief.addItems(raster_layer_names)        
         
