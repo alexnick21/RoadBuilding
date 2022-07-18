@@ -53,6 +53,9 @@ class RoadBuild:
         self.end_points   = []
         self.end_points_num   = []
 
+    def segmentCount(self):
+        return len(self.line_segments)
+
     # Проверка нахождения точки на проектной линии
     def hasTransitPoint(self, polyline, bp, ep):
         for p in self.begin_points:
