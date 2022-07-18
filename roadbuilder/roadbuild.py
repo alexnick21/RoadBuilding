@@ -27,6 +27,7 @@ from qgis.core import (
   QgsSpatialIndex,
   QgsVectorLayerUtils,
   QgsPoint,
+  QgsRaster
 )
 
 from qgis.core.additions.edit import edit
@@ -38,15 +39,24 @@ from qgis.PyQt.QtGui import (
 )
 from qgis.PyQt.QtWidgets import QAction,QMessageBox
 import processing
+import math
 
 # Класс для построения дороги сети
 class RoadBuild:
     def __init__(self):
         self.line_segments = []
         self.segment_names = []
+        self.segment_elev =  []
         self.data = []
 
-    def updateArea(self,ID,area):
+    # Получение информации о высоте точки
+    # по данным растра
+    def valueRaster(self, p, raster_layer):
+        value = list(raster_layer.dataProvider().identify(p, QgsRaster.IdentifyFormatValue).results().values())[0]
+        return value 
+
+    # Обновление сведений о площади объекта
+    def updateArea(self, ID, area):
         for line in self.data:
             if line[0] == ID:
                 line[3] = area
@@ -56,7 +66,7 @@ class RoadBuild:
     # point_layer - Слой "крафтовых" точек
     # lines_name  - Имя для линейного слоя
     # buffer_size - Размер буфера в единицах проекта
-    def createRoads(self, point_layer, lines_name, buffer_size):
+    def createRoads(self, point_layer, lines_name, buffer_size, layer_relief):
         begin_points = []
         begin_points_num = []
         end_points   = []
@@ -101,19 +111,17 @@ class RoadBuild:
         # СОеденяем все и со всем по кратчайшему пути
         # Анализ рельефа остается только в рамках
         # вычисления длин наклонных линий и поправке к площади проекции
+        # реальную поверхность упрощаем т.к. задача очевидно не боевая
         for pb, bi in zip(begin_points, begin_points_num):
             for pe, ei in zip(end_points, end_points_num):
                 poline = QgsGeometry.fromPolylineXY([pb, pe])
                 if poline.length() != 0:
+                    self.segment_elev.append([self.valueRaster(pb, layer_relief), self.valueRaster(pe, layer_relief)])
                     self.line_segments.append(poline)
                     self.segment_names.append(str(bi) + '-' + str(ei))
                 
             end_points.pop(0)
-            end_points_num.pop(0)
-            
-        #layerType = layer.type()
-        #if layerType == QgsMapLayer.VectorLayer:
-           # do some stuff here
+            end_points_num.pop(0)                    
            
         # Создадим в памяти слой
         # Сразу запихаем его в правильную систему координат дабы не искать его в Японии
@@ -122,15 +130,25 @@ class RoadBuild:
         layer.setCrs(crs) # Он с первого раза не понял :)
         prov = layer.dataProvider()
         layer.startEditing()
-        res = prov.addAttributes([QgsField("ID", QVariant.Int), QgsField("segment", QVariant.String)])      
+        res = prov.addAttributes([QgsField("ID", QVariant.Int), QgsField("segment", QVariant.String), QgsField("h", QVariant.Double),QgsField("incl", QVariant.Double)])      
         
         idi = 1
-        for pol, nm in zip(self.line_segments, self.segment_names):
+        for pol, nm, elevations in zip(self.line_segments, self.segment_names, self.segment_elev):
             feat = QgsFeature()
-            feat.setAttributes([idi,nm])
+            
+            # Вычисление превышения и угла наклона
+            # Прибегаем к помощи теоремы Пифагора
+            h = elevations[0] - elevations[1]
+            # Учитываем общий наклон поверхности
+            L = math.sqrt(abs(h)**2 + pol.length()**2)
+            
+            inclination = math.asin(abs(h) / L)
+            
+            feat.setAttributes([idi, nm, h , inclination])
             feat.setGeometry(pol)
             prov.addFeatures([feat])
-            self.data.append([idi,nm,pol.length(),0.0])
+            
+            self.data.append([idi,nm,L,0.0])
             idi = idi + 1
             
         layer.commitChanges()
@@ -159,8 +177,12 @@ class RoadBuild:
            for feat in feats:
                g = feat.geometry()
                fi = layer_buffer.fields().indexFromName('ID')
+               incli = layer_buffer.fields().indexFromName('incl')
                fid = feat.attributes()[fi]
-               self.updateArea(fid,g.area())
+               incl = feat.attributes()[incli]
+               # Корректируем площадь по углу наклона
+               # Исходим из теоремы о площади проекции плоской фигуры
+               self.updateArea(fid,g.area() / math.cos(incl))
             
                 
         return self.data

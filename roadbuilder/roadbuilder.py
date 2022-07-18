@@ -62,6 +62,7 @@ from qgis.core import (
   QgsSpatialIndex,
   QgsVectorLayerUtils,
   QgsPoint,
+  QgsMapLayer
 )
 
 from .roadbuild import RoadBuild
@@ -226,15 +227,28 @@ class RoadBuilder:
 
         # show the dialog
         # инициализация диалогового окна
-        layer_names = [layer.name() for layer in QgsProject.instance().mapLayers().values()]
+        layer_names = []
+        for layer in QgsProject.instance().mapLayers().values():            
+            layerType = layer.type()
+            if layerType == QgsMapLayer.VectorLayer:
+                layer_names.append(layer.name())
+
+        # Рельеф берем только с растра
+        # т.к. анализ изолиний и отметок высот явно лежит за рамками настоящей задачи
+        raster_layer_names = []
+        for layer in QgsProject.instance().mapLayers().values():            
+            layerType = layer.type()
+            if layerType == QgsMapLayer.RasterLayer:
+                raster_layer_names.append(layer.name())
+                
         self.dlg.lineEditRoad.setText("road_lines")
         self.dlg.comboBoxPoints.addItems(layer_names)
-        self.dlg.comboBoxRelief.addItems(layer_names)        
+        self.dlg.comboBoxRelief.addItems(raster_layer_names)        
         
         # Валидируем ввод.
         size_validator = QgsDoubleValidator(0.0001,999.9999,5,None)
         self.dlg.lineEditBufSize.setValidator(size_validator)
-        self.dlg.lineEditBufSize.setText("4")
+        self.dlg.lineEditBufSize.setText("4.0")
         self.dlg.show()
                        
         # Run the dialog event loop
@@ -255,15 +269,14 @@ class RoadBuilder:
             layers = QgsProject.instance().mapLayersByName(self.dlg.comboBoxRelief.currentText())            
             if len(layers) != 0:
                 layer_relief = layers[0]
+                
 
             if layer_points != None and layer_relief != None:
                 roads = RoadBuild()
-                result_data = roads.createRoads(layer_points, layer_roads_name, buffer_size)
-                #QgsMessageLog.logMessage(u"Точки: " + str(layer_points.name()),"RoadBuilder")
-                #QgsMessageLog.logMessage(u"Линии: " + str(layer_roads_name),"RoadBuilder")
-                #QgsMessageLog.logMessage(u"Рельеф: " + str(layer_relief.name()),"RoadBuilder")
+                result_data = roads.createRoads(layer_points, layer_roads_name, buffer_size, layer_relief)
                 
                 resultDlg = ResultDialog()
+                #### Формирование таблицы ###
                 resultDlg.tableWidgetResult.setRowCount(len(result_data))
                 resultDlg.tableWidgetResult.setColumnCount(4)
                 # Заголовки таблицы
@@ -290,18 +303,15 @@ class RoadBuilder:
                     total_area   = total_area + str_data[3]
                     resultDlg.tableWidgetResult.setItem(i, 0, QTableWidgetItem(str(str_data[0])))
                     resultDlg.tableWidgetResult.setItem(i, 1, QTableWidgetItem(str(str_data[1])))
-                    resultDlg.tableWidgetResult.setItem(i, 2, QTableWidgetItem('{:10.5f}'.format(str_data[2])))
-                    resultDlg.tableWidgetResult.setItem(i, 3, QTableWidgetItem('{:10.5f}'.format(str_data[3])))
+                    resultDlg.tableWidgetResult.setItem(i, 2, QTableWidgetItem('{:10.4f}'.format(str_data[2])))
+                    resultDlg.tableWidgetResult.setItem(i, 3, QTableWidgetItem('{:10.4f}'.format(str_data[3])))
                     i = i + 1
                 
-                resultDlg.lineEditLength.setText('{:10.5f}'.format(total_length))
-                resultDlg.lineEditArea.setText('{:10.5f}'.format(total_area))
+                resultDlg.lineEditLength.setText('{:10.4f}'.format(total_length))
+                resultDlg.lineEditArea.setText('{:10.4f}'.format(total_area))
                 
                 resultDlg.show()
                 result = resultDlg.exec_()
             else:
                QMessageBox.warning(None, u"Ошибка", u'Возникла проблема с указанными параметрами')
-               #QgsMessageLog.logMessage(u"Точки: " + str(self.dlg.comboBoxPoints.currentText()),"RoadBuilder")
-               #QgsMessageLog.logMessage(u"Линии: " + str(layer_roads_name),"RoadBuilder")
-               #QgsMessageLog.logMessage(u"Рельеф: " + str(self.dlg.comboBoxRelief.currentText()),"RoadBuilder")
                #pass
